@@ -20,26 +20,13 @@ import (
 
 var mongoClient *mongo.Client = db.ConnectMongoDB()
 
-type UserCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type UserProfile struct {
-	Username  string `json:"username"`
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-}
-
 func AddUserProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	byteData, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	utils.CheckError(err)
 
-	var profile UserProfile
+	var profile models.UserProfile
 	err = json.Unmarshal(byteData, &profile)
 	utils.CheckError(err)
 
@@ -56,14 +43,14 @@ func GetAllUserProfiles(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	//Get user profile from mongodb
-	var profiles []UserProfile
+	var profiles []models.UserProfile
 	coll := db.GetCollection(mongoClient, "profiles")
 	filter := bson.M{}
 	cur, err := coll.Find(context.Background(), filter)
 	utils.CheckError(err)
 
 	for cur.Next(context.Background()) {
-		var profile UserProfile
+		var profile models.UserProfile
 		err := cur.Decode(&profile)
 		utils.CheckError(err)
 		profiles = append(profiles, profile)
@@ -85,7 +72,7 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	username := vars["username"]
 
 	//Get user profile from mongodb
-	var profile UserProfile
+	var profile models.UserProfile
 	coll := db.GetCollection(mongoClient, "profiles")
 	filter := bson.M{"username": username}
 	err := coll.FindOne(context.Background(), filter).Decode(&profile)
@@ -108,7 +95,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	utils.CheckError(err)
 
-	var userCredentials UserCredentials
+	var userCredentials models.UserCredentials
 	err = json.Unmarshal(byteData, &userCredentials)
 	utils.CheckError(err)
 
@@ -133,12 +120,12 @@ func UserLogin(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	utils.CheckError(err)
 
-	var userCredentials UserCredentials
+	var userCredentials models.UserCredentials
 	err = json.Unmarshal(byteData, &userCredentials)
 	utils.CheckError(err)
 
 	// Check if credentials match in mongodb
-	var result UserCredentials
+	var result models.UserCredentials
 	coll := db.GetCollection(mongoClient, "users")
 	filter := bson.M{"username": userCredentials.Username}
 	err = coll.FindOne(context.Background(), filter).Decode(&result)
@@ -267,7 +254,7 @@ func AddCourseToCart(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	utils.CheckError(err)
 
-	var userDetails UserCredentials
+	var userDetails models.UserCredentials
 	err = json.Unmarshal(bytes, &userDetails)
 	utils.CheckError(err)
 
@@ -275,7 +262,7 @@ func AddCourseToCart(w http.ResponseWriter, r *http.Request) {
 	userFilter := bson.M{"username": username}
 	userColl := db.GetCollection(mongoClient, "users")
 	userResult := userColl.FindOne(context.Background(), userFilter)
-	var user UserCredentials
+	var user models.UserCredentials
 	err = userResult.Decode(&user)
 	if err == mongo.ErrNoDocuments {
 		json.NewEncoder(w).Encode(map[string]string{"error": "User doesn't exist! Please verify."})
